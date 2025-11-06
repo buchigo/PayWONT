@@ -6,6 +6,12 @@ function App() {
   const [hasSnappedFromHero, setHasSnappedFromHero] = useState(false)
   const heroRef = useRef(null)
   const entryRef = useRef(null)
+  const snappingRef = useRef(false)
+  const hasSnappedRef = useRef(hasSnappedFromHero)
+
+  useEffect(() => {
+    hasSnappedRef.current = hasSnappedFromHero
+  }, [hasSnappedFromHero])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -23,47 +29,78 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (hasSnappedFromHero) {
-      return
+    const snapToEntry = () => {
+      if (snappingRef.current) return
+      snappingRef.current = true
+      const target = entryRef.current
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+      setHasSnappedFromHero(true)
+      setTimeout(() => {
+        snappingRef.current = false
+      }, 600)
+    }
+
+    const snapToHero = () => {
+      if (snappingRef.current) return
+      snappingRef.current = true
+      const target = heroRef.current
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+      setTimeout(() => {
+        snappingRef.current = false
+      }, 600)
+    }
+
+    const shouldInterceptDown = () => {
+      if (snappingRef.current || hasSnappedRef.current) return false
+      const hero = heroRef.current
+      const heroHeight = hero?.offsetHeight ?? window.innerHeight
+      return window.scrollY <= heroHeight * 0.25
+    }
+
+    const shouldInterceptUp = () => {
+      if (snappingRef.current || !hasSnappedRef.current) return false
+      const entry = entryRef.current
+      if (!entry) return false
+      const entryTop = entry.getBoundingClientRect().top
+      return entryTop >= -40 && entryTop <= window.innerHeight * 0.6
     }
 
     let touchStartY = 0
     let touchActive = false
-    let snapping = false
-
-    const snapToEntry = () => {
-      if (snapping) return
-      snapping = true
-      const section = entryRef.current
-      if (section) {
-        section.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      }
-      setHasSnappedFromHero(true)
-      setTimeout(() => {
-        snapping = false
-      }, 600)
-    }
-
-    const shouldIntercept = () => {
-      const hero = heroRef.current
-      if (!hero) {
-        return window.scrollY < window.innerHeight * 0.4
-      }
-      const heroHeight = hero.offsetHeight || window.innerHeight
-      return window.scrollY <= heroHeight * 0.2
-    }
 
     const handleWheel = (event) => {
-      if (event.deltaY <= 0 || !shouldIntercept()) return
-      event.preventDefault()
-      snapToEntry()
+      if (event.deltaY > 0 && shouldInterceptDown()) {
+        event.preventDefault()
+        snapToEntry()
+      } else if (event.deltaY < 0 && shouldInterceptUp()) {
+        event.preventDefault()
+        snapToHero()
+      }
     }
 
     const handleKeyDown = (event) => {
-      const keys = ['Space', 'PageDown', 'ArrowDown']
-      if (!keys.includes(event.code) || !shouldIntercept()) return
-      event.preventDefault()
-      snapToEntry()
+      let direction = null
+      if (event.code === 'Space') {
+        direction = event.shiftKey ? 'up' : 'down'
+      } else if (['PageDown', 'ArrowDown'].includes(event.code)) {
+        direction = 'down'
+      } else if (['PageUp', 'ArrowUp'].includes(event.code)) {
+        direction = 'up'
+      }
+
+      if (direction === 'down' && shouldInterceptDown()) {
+        event.preventDefault()
+        snapToEntry()
+      } else if (direction === 'up' && shouldInterceptUp()) {
+        event.preventDefault()
+        snapToHero()
+      }
     }
 
     const handleTouchStart = (event) => {
@@ -72,13 +109,19 @@ function App() {
     }
 
     const handleTouchMove = (event) => {
-      if (!touchActive || !shouldIntercept()) return
+      if (!touchActive) return
       const currentY = event.touches[0]?.clientY ?? 0
       const delta = touchStartY - currentY
-      if (delta <= 12) return
-      event.preventDefault()
-      touchActive = false
-      snapToEntry()
+
+      if (delta > 12 && shouldInterceptDown()) {
+        event.preventDefault()
+        touchActive = false
+        snapToEntry()
+      } else if (delta < -12 && shouldInterceptUp()) {
+        event.preventDefault()
+        touchActive = false
+        snapToHero()
+      }
     }
 
     const handleTouchEnd = () => {
@@ -98,7 +141,7 @@ function App() {
       window.removeEventListener('touchmove', handleTouchMove)
       window.removeEventListener('touchend', handleTouchEnd)
     }
-  }, [hasSnappedFromHero])
+  }, [])
 
   const menuItems = [
     { href: '#intro', label: '소개' },
