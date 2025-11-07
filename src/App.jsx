@@ -19,7 +19,9 @@ function App() {
     snappingRef.current = true
     const target = entryRef.current
     if (target) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      const top =
+        target.getBoundingClientRect().top + window.scrollY
+      window.scrollTo({ top, behavior: 'smooth' })
     }
     setHasSnappedFromHero(true)
     setTimeout(() => {
@@ -32,7 +34,9 @@ function App() {
     snappingRef.current = true
     const target = heroRef.current
     if (target) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      const top =
+        target.getBoundingClientRect().top + window.scrollY
+      window.scrollTo({ top, behavior: 'smooth' })
     } else {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
@@ -53,9 +57,25 @@ function App() {
 
       const lastY = lastScrollYRef.current
       const isScrollingUp = currentY < lastY
+      const isScrollingDown = currentY > lastY
       const hero = heroRef.current
+      const heroBottom = hero?.getBoundingClientRect().bottom ?? 0
+      const heroHeight = hero?.offsetHeight ?? window.innerHeight
+
+      if (
+        isScrollingDown &&
+        hero &&
+        !hasSnappedRef.current &&
+        !snappingRef.current
+      ) {
+        if (heroBottom > 0 && heroBottom <= window.innerHeight - 2) {
+          snapToEntry()
+        } else if (heroBottom <= 0 && currentY <= heroHeight * 1.2) {
+          snapToEntry()
+        }
+      }
+
       if (isScrollingUp && hero && !snappingRef.current) {
-        const heroBottom = hero.getBoundingClientRect().bottom
         if (heroBottom >= -window.innerHeight * 0.15 && heroBottom <= 24) {
           snapToHero()
         }
@@ -67,7 +87,7 @@ function App() {
     handleScroll()
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [snapToHero])
+  }, [snapToEntry, snapToHero])
 
   useEffect(() => {
     const shouldInterceptDown = () => {
