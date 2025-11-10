@@ -61,6 +61,13 @@ function App() {
       const hero = heroRef.current
       const heroBottom = hero?.getBoundingClientRect().bottom ?? 0
       const heroHeight = hero?.offsetHeight ?? window.innerHeight
+      const entry = entryRef.current
+      const entryTop = entry?.getBoundingClientRect().top ?? null
+      const topSnapZone = Math.max(60, window.innerHeight * 0.08)
+      const entryNearViewportTop =
+        entryTop !== null &&
+        entryTop >= -topSnapZone &&
+        entryTop <= topSnapZone
 
       if (
         isScrollingDown &&
@@ -75,8 +82,13 @@ function App() {
         }
       }
 
-      if (isScrollingUp && hero && !snappingRef.current) {
-        if (heroBottom >= -window.innerHeight * 0.15 && heroBottom <= 24) {
+      if (isScrollingUp && !snappingRef.current) {
+        const heroNearViewportTop =
+          hero &&
+          heroBottom >= -window.innerHeight * 0.15 &&
+          heroBottom <= 24
+
+        if (heroNearViewportTop || entryNearViewportTop) {
           snapToHero()
         }
       }
@@ -102,13 +114,19 @@ function App() {
       const entry = entryRef.current
       if (!entry) return false
       const entryTop = entry.getBoundingClientRect().top
-      return entryTop >= -40 && entryTop <= window.innerHeight * 0.6
+      const topSnapZone = Math.max(60, window.innerHeight * 0.08)
+      return entryTop >= -topSnapZone && entryTop <= window.innerHeight * 0.6
     }
 
     let touchStartY = 0
     let touchActive = false
 
     const handleWheel = (event) => {
+      if (snappingRef.current) {
+        event.preventDefault()
+        return
+      }
+
       if (event.deltaY > 0 && shouldInterceptDown()) {
         event.preventDefault()
         snapToEntry()
@@ -144,6 +162,11 @@ function App() {
 
     const handleTouchMove = (event) => {
       if (!touchActive) return
+      if (snappingRef.current) {
+        event.preventDefault()
+        touchActive = false
+        return
+      }
       const currentY = event.touches[0]?.clientY ?? 0
       const delta = touchStartY - currentY
 

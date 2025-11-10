@@ -9,6 +9,7 @@
   top: 1.5rem;
   left: 50%;
   transform: translateX(-50%);
+  transform-origin: center;
   width: min(960px, 88vw);
   padding: clamp(0.85rem, 1.4vw, 1.15rem) clamp(2rem, 4vw, 3rem);
   z-index: 100;
@@ -119,8 +120,6 @@
 
 .nav-shell--solid {
   top: 0;
-  left: 0;
-  transform: none;
   width: 100%;
   padding: 1rem clamp(1.25rem, 4vw, 3rem);
   border-radius: 0 0 26px 26px;
